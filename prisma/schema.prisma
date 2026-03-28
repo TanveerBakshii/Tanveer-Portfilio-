@@ -1,0 +1,387 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// User model for authentication
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String    // hashed
+  role          UserRole  @default(ADMIN)
+  isActive      Boolean   @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  apiKeys       ApiKey[]
+  webhooks      Webhook[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// Profile - Main portfolio information
+model Profile {
+  id              String   @id @default(cuid())
+  name            String
+  role            String
+  tagline         String?
+  experience      String   // e.g., "7+ Years"
+  location        String
+  phone           String?
+  email           String
+  linkedin        String?
+  github          String?
+  website         String?
+  bio             String?  @db.Text
+  shortBio        String?  @db.Text
+  avatar          String?  // URL to image
+  resumeUrl       String?  // URL to resume PDF
+  heroImage       String?  // URL to hero image
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("profile")
+}
+
+// Experience entries
+model Experience {
+  id          String   @id @default(cuid())
+  company     String
+  title       String
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean  @default(false)
+  description String   @db.Text
+  impact      String[] // Array of key achievements
+  skills      String[] // Skills used
+  order       Int      @default(0)
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("experience")
+}
+
+// Projects/Case Studies
+model Project {
+  id            String   @id @default(cuid())
+  title         String
+  slug          String   @unique
+  summary       String   // Short description for cards
+  description   String   @db.Text // Full case study
+  challenge     String?  @db.Text
+  solution      String?  @db.Text
+  outcome       String?  @db.Text
+  metrics       Json?    // Key metrics as JSON
+  technologies  String[]
+  skills        String[]
+  images        String[] // Array of image URLs
+  thumbnail     String?  // Main project image
+  githubUrl     String?
+  liveUrl       String?
+  caseStudyUrl  String?
+  featured      Boolean  @default(false)
+  order         Int      @default(0)
+  isPublic      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("projects")
+}
+
+// Skills with categories
+model Skill {
+  id          String       @id @default(cuid())
+  name        String
+  category    SkillCategory
+  proficiency Int          @default(80) // 0-100
+  icon        String?      // Icon name or URL
+  description String?
+  order       Int          @default(0)
+  isPublic    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@map("skills")
+}
+
+enum SkillCategory {
+  DATA_REPORTING
+  HEALTHCARE
+  ENGINEERING
+  COLLABORATION
+  TOOLS
+}
+
+// Tools & Technologies
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // e.g., "Database", "Visualization", "Cloud"
+  icon        String?  // Icon URL or name
+  proficiency Int?     // Optional skill level
+  description String?
+  isPublic    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("tools")
+}
+
+// Certifications
+model Certification {
+  id          String    @id @default(cuid())
+  name        String
+  issuer      String
+  issueDate   DateTime?
+  expiryDate  DateTime?
+  credentialId String?
+  url         String?
+  image       String?
+  isPublic    Boolean   @default(true)
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("certifications")
+}
+
+// Blog posts / Insights
+model Blog {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  excerpt     String    // Short summary
+  content     String    @db.Text // Full content (markdown)
+  coverImage  String?
+  tags        String[]
+  readTime    Int?      // Minutes
+  featured    Boolean   @default(false)
+  publishedAt DateTime?
+  isPublic    Boolean   @default(false)
+  views       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("blogs")
+}
+
+// Custom Tabs - Dynamic content sections
+model CustomTab {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  description String?
+  content     String    @db.Text // Markdown or JSON content
+  type        TabType   @default(MARKDOWN)
+  widgets     Json?     // Widget configuration
+  externalUrl String?
+  icon        String?
+  order       Int       @default(0)
+  isPublic    Boolean   @default(true)
+  isVisible   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("custom_tabs")
+}
+
+enum TabType {
+  MARKDOWN
+  HTML
+  WIDGET
+  EXTERNAL
+  API_EMBED
+}
+
+// Media assets
+model Media {
+  id          String   @id @default(cuid())
+  filename    String
+  originalName String
+  url         String
+  thumbnailUrl String?
+  mimeType    String
+  size        Int      // Bytes
+  width       Int?
+  height      Int?
+  alt         String?
+  tags        String[]
+  folder      String   @default("general")
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("media")
+}
+
+// Contact messages
+model Message {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String   @db.Text
+  ipAddress String?
+  userAgent String?
+  isRead    Boolean  @default(false)
+  repliedAt DateTime?
+  createdAt DateTime @default(now())
+  
+  @@map("messages")
+}
+
+// API Keys for external access
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  key         String    @unique
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissions String[]  // e.g., ["read:profile", "read:projects"]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("api_keys")
+}
+
+// Webhooks for external integrations
+model Webhook {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events      String[] // e.g., ["contact.created", "project.updated"]
+  secret      String?  // For signature verification
+  isActive    Boolean  @default(true)
+  retryCount  Int      @default(3)
+  lastTriggered DateTime?
+  lastError   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  logs        WebhookLog[]
+  
+  @@map("webhooks")
+}
+
+// Webhook delivery logs
+model WebhookLog {
+  id          String   @id @default(cuid())
+  webhookId   String
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event       String
+  payload     Json
+  responseStatus Int?
+  responseBody String?
+  error       String?
+  attempt     Int      @default(1)
+  duration    Int?     // ms
+  createdAt   DateTime @default(now())
+  
+  @@map("webhook_logs")
+}
+
+// Analytics - Page visits and events
+model Analytics {
+  id          String   @id @default(cuid())
+  sessionId   String?
+  page        String   // Page path
+  section     String?  // Section viewed
+  referrer    String?
+  ipAddress   String?
+  userAgent   String?
+  country     String?
+  city        String?
+  device      String?  // mobile, tablet, desktop
+  browser     String?
+  os          String?
+  duration    Int?     // Time on page in seconds
+  metadata    Json?    // Additional data
+  createdAt   DateTime @default(now())
+  
+  events      AnalyticsEvent[]
+  
+  @@index([page])
+  @@index([createdAt])
+  @@map("analytics")
+}
+
+// Analytics events (clicks, downloads, etc.)
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  analyticsId String
+  analytics   Analytics @relation(fields: [analyticsId], references: [id], onDelete: Cascade)
+  eventType   String    // e.g., "click", "download", "scroll"
+  element     String?   // Element identifier
+  value       String?   // Event value
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  
+  @@map("analytics_events")
+}
+
+// Testimonials
+model Testimonial {
+  id          String   @id @default(cuid())
+  name        String
+  role        String
+  company     String?
+  avatar      String?
+  quote       String   @db.Text
+  isPublic    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("testimonials")
+}
+
+// Education
+model Education {
+  id          String   @id @default(cuid())
+  institution String
+  degree      String
+  field       String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isCurrent   Boolean  @default(false)
+  description String?
+  isPublic    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("education")
+}
+
+// Settings - System configuration
+model Setting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("settings")
+}
