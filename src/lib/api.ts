@@ -14,20 +14,7 @@ import type {
   DashboardStats,
   AdminSettings,
 } from '@/types';
-import {
-  mockProfile,
-  mockExperiences,
-  mockProjects,
-  mockSkills,
-  mockTools,
-  mockCertifications,
-  mockBlogs,
-  mockTestimonials,
-  mockEducation,
-  mockCustomTabs,
-  mockDashboardStats,
-  mockMessages,
-} from './mockData';
+import { supabase } from './supabase';
 
 // Simulate network delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,25 +22,50 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Profile API
 export const profileApi = {
   get: async (): Promise<Profile> => {
-    await delay(300);
-    return mockProfile;
+    const { data, error } = await supabase
+      .from('profile')
+      .select('*')
+      .eq('id', '1') // Using id '1' as our default profile which we seeded
+      .single();
+    
+    if (error) throw error;
+    return data as Profile;
   },
   update: async (data: Partial<Profile>): Promise<Profile> => {
-    await delay(500);
-    Object.assign(mockProfile, data, { updatedAt: new Date().toISOString() });
-    return mockProfile;
+    const { data: updated, error } = await supabase
+      .from('profile')
+      .update(data)
+      .eq('id', '1')
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return updated as Profile;
   },
   uploadMedia: async (file: File): Promise<{ url: string }> => {
-    await delay(1000);
-    // In a real app, this would upload to S3/Cloudinary
-    // Mocking an upload by creating a local URL or just returning a static one
-    const mockUrl = `/uploads/${file.name.replace(/\s+/g, '_')}`;
-    console.log('[API] Uploaded media:', file.name, 'to', mockUrl);
-    return { url: mockUrl };
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `uploads/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('media')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('media')
+      .getPublicUrl(filePath);
+
+    return { url: data.publicUrl };
   },
   deleteMedia: async (url: string): Promise<void> => {
-    await delay(300);
-    console.log('[API] Deleted media:', url);
+    // Basic implementation: extract path from public URL
+    const path = url.split('/').pop() || '';
+    const { error } = await supabase.storage
+      .from('media')
+      .remove([`uploads/${path}`]);
+    if (error) console.error('Error deleting media:', error);
   },
 };
 
@@ -61,413 +73,492 @@ export const profileApi = {
 // Experience API
 export const experienceApi = {
   getAll: async (): Promise<Experience[]> => {
-    await delay(300);
-    return [...mockExperiences].sort((a, b) => a.order - b.order);
+    const { data, error } = await supabase
+      .from('experience')
+      .select('*')
+      .order('order', { ascending: true });
+    
+    if (error) throw error;
+    return data as Experience[];
   },
   get: async (id: string): Promise<Experience | undefined> => {
-    await delay(200);
-    return mockExperiences.find((e) => e.id === id);
+    const { data, error } = await supabase
+      .from('experience')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) return undefined;
+    return data as Experience;
   },
   create: async (data: Omit<Experience, 'id' | 'createdAt' | 'updatedAt'>): Promise<Experience> => {
-    await delay(500);
-    const newExperience: Experience = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockExperiences.push(newExperience);
-    return newExperience;
+    const { data: created, error } = await supabase
+      .from('experience')
+      .insert(data)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return created as Experience;
   },
   update: async (id: string, data: Partial<Experience>): Promise<Experience> => {
-    await delay(400);
-    const index = mockExperiences.findIndex((e) => e.id === id);
-    if (index === -1) throw new Error('Experience not found');
-    mockExperiences[index] = {
-      ...mockExperiences[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockExperiences[index];
+    const { data: updated, error } = await supabase
+      .from('experience')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return updated as Experience;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockExperiences.findIndex((e) => e.id === id);
-    if (index !== -1) mockExperiences.splice(index, 1);
+    const { error } = await supabase
+      .from('experience')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
   },
 };
 
 // Projects API
 export const projectsApi = {
   getAll: async (options?: { featured?: boolean; limit?: number }): Promise<Project[]> => {
-    await delay(300);
-    let projects = [...mockProjects].sort((a, b) => a.order - b.order);
+    let query = supabase
+      .from('projects')
+      .select('*')
+      .order('order', { ascending: true });
+    
     if (options?.featured) {
-      projects = projects.filter((p) => p.featured);
+      query = query.eq('featured', true);
     }
+    
     if (options?.limit) {
-      projects = projects.slice(0, options.limit);
+      query = query.limit(options.limit);
     }
-    return projects;
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Project[];
   },
   get: async (slug: string): Promise<Project | undefined> => {
-    await delay(200);
-    return mockProjects.find((p) => p.slug === slug);
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    
+    if (error) return undefined;
+    return data as Project;
   },
   create: async (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project> => {
-    await delay(500);
-    const newProject: Project = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockProjects.push(newProject);
-    return newProject;
+    const { data: created, error } = await supabase
+      .from('projects')
+      .insert(data)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return created as Project;
   },
   update: async (id: string, data: Partial<Project>): Promise<Project> => {
-    await delay(400);
-    const index = mockProjects.findIndex((p) => p.id === id);
-    if (index === -1) throw new Error('Project not found');
-    mockProjects[index] = {
-      ...mockProjects[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockProjects[index];
+    const { data: updated, error } = await supabase
+      .from('projects')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return updated as Project;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockProjects.findIndex((p) => p.id === id);
-    if (index !== -1) mockProjects.splice(index, 1);
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Skills API
 export const skillsApi = {
   getAll: async (): Promise<Skill[]> => {
-    await delay(300);
-    return [...mockSkills].sort((a, b) => a.order - b.order);
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .order('order', { ascending: true });
+    
+    if (error) throw error;
+    return data as Skill[];
   },
   getByCategory: async (): Promise<Record<string, Skill[]>> => {
-    await delay(300);
-    const skills = [...mockSkills].sort((a, b) => a.order - b.order);
-    return skills.reduce((acc, skill) => {
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .order('order', { ascending: true });
+    
+    if (error) throw error;
+    
+    return (data as Skill[]).reduce((acc, skill) => {
       if (!acc[skill.category]) acc[skill.category] = [];
       acc[skill.category].push(skill);
       return acc;
     }, {} as Record<string, Skill[]>);
   },
   create: async (data: Omit<Skill, 'id' | 'createdAt' | 'updatedAt'>): Promise<Skill> => {
-    await delay(500);
-    const newSkill: Skill = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockSkills.push(newSkill);
-    return newSkill;
+    const { data: created, error } = await supabase
+      .from('skills')
+      .insert(data)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return created as Skill;
   },
   update: async (id: string, data: Partial<Skill>): Promise<Skill> => {
-    await delay(400);
-    const index = mockSkills.findIndex((s) => s.id === id);
-    if (index === -1) throw new Error('Skill not found');
-    mockSkills[index] = {
-      ...mockSkills[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockSkills[index];
+    const { data: updated, error } = await supabase
+      .from('skills')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as Skill;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockSkills.findIndex((s) => s.id === id);
-    if (index !== -1) mockSkills.splice(index, 1);
+    const { error } = await supabase
+      .from('skills')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Tools API
 export const toolsApi = {
   getAll: async (): Promise<Tool[]> => {
-    await delay(300);
-    return [...mockTools].sort((a, b) => a.order - b.order);
+    const { data, error } = await supabase
+      .from('tools')
+      .select('*')
+      .order('order', { ascending: true });
+    if (error) throw error;
+    return data as Tool[];
   },
   create: async (data: Omit<Tool, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tool> => {
-    await delay(500);
-    const newTool: Tool = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockTools.push(newTool);
-    return newTool;
+    const { data: created, error } = await supabase
+      .from('tools')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    return created as Tool;
   },
   update: async (id: string, data: Partial<Tool>): Promise<Tool> => {
-    await delay(400);
-    const index = mockTools.findIndex((t) => t.id === id);
-    if (index === -1) throw new Error('Tool not found');
-    mockTools[index] = {
-      ...mockTools[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockTools[index];
+    const { data: updated, error } = await supabase
+      .from('tools')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as Tool;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockTools.findIndex((t) => t.id === id);
-    if (index !== -1) mockTools.splice(index, 1);
+    const { error } = await supabase
+      .from('tools')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Certifications API
 export const certificationsApi = {
   getAll: async (): Promise<Certification[]> => {
-    await delay(300);
-    return [...mockCertifications].sort((a, b) => a.order - b.order);
+    const { data, error } = await supabase
+      .from('certifications')
+      .select('*')
+      .order('order', { ascending: true });
+    if (error) throw error;
+    return data as Certification[];
   },
   create: async (data: Omit<Certification, 'id' | 'createdAt' | 'updatedAt'>): Promise<Certification> => {
-    await delay(500);
-    const newCert: Certification = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockCertifications.push(newCert);
-    return newCert;
+    const { data: created, error } = await supabase
+      .from('certifications')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    return created as Certification;
   },
   update: async (id: string, data: Partial<Certification>): Promise<Certification> => {
-    await delay(400);
-    const index = mockCertifications.findIndex((c) => c.id === id);
-    if (index === -1) throw new Error('Certification not found');
-    mockCertifications[index] = {
-      ...mockCertifications[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockCertifications[index];
+    const { data: updated, error } = await supabase
+      .from('certifications')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as Certification;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockCertifications.findIndex((c) => c.id === id);
-    if (index !== -1) mockCertifications.splice(index, 1);
+    const { error } = await supabase
+      .from('certifications')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Blogs API
 export const blogsApi = {
   getAll: async (options?: { featured?: boolean; limit?: number }): Promise<Blog[]> => {
-    await delay(300);
-    let blogs = [...mockBlogs].sort((a, b) => 
-      new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
-    );
+    let query = supabase
+      .from('blogs')
+      .select('*')
+      .order('publishedAt', { ascending: false });
+    
     if (options?.featured) {
-      blogs = blogs.filter((b) => b.featured);
+      query = query.eq('featured', true);
     }
+    
     if (options?.limit) {
-      blogs = blogs.slice(0, options.limit);
+      query = query.limit(options.limit);
     }
-    return blogs;
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Blog[];
   },
   get: async (slug: string): Promise<Blog | undefined> => {
-    await delay(200);
-    return mockBlogs.find((b) => b.slug === slug);
+    const { data, error } = await supabase
+      .from('blogs')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    if (error) return undefined;
+    return data as Blog;
   },
   create: async (data: Omit<Blog, 'id' | 'createdAt' | 'updatedAt'>): Promise<Blog> => {
-    await delay(500);
-    const newBlog: Blog = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockBlogs.push(newBlog);
-    return newBlog;
+    const { data: created, error } = await supabase
+      .from('blogs')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    return created as Blog;
   },
   update: async (id: string, data: Partial<Blog>): Promise<Blog> => {
-    await delay(400);
-    const index = mockBlogs.findIndex((b) => b.id === id);
-    if (index === -1) throw new Error('Blog not found');
-    mockBlogs[index] = {
-      ...mockBlogs[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockBlogs[index];
+    const { data: updated, error } = await supabase
+      .from('blogs')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as Blog;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockBlogs.findIndex((b) => b.id === id);
-    if (index !== -1) mockBlogs.splice(index, 1);
+    const { error } = await supabase
+      .from('blogs')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Testimonials API
 export const testimonialsApi = {
   getAll: async (): Promise<Testimonial[]> => {
-    await delay(300);
-    return [...mockTestimonials].sort((a, b) => a.order - b.order);
+    const { data, error } = await supabase
+      .from('testimonials')
+      .select('*')
+      .order('order', { ascending: true });
+    if (error) throw error;
+    return data as Testimonial[];
   },
   create: async (data: Omit<Testimonial, 'id' | 'createdAt' | 'updatedAt'>): Promise<Testimonial> => {
-    await delay(500);
-    const newTestimonial: Testimonial = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockTestimonials.push(newTestimonial);
-    return newTestimonial;
+    const { data: created, error } = await supabase
+      .from('testimonials')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    return created as Testimonial;
   },
   update: async (id: string, data: Partial<Testimonial>): Promise<Testimonial> => {
-    await delay(400);
-    const index = mockTestimonials.findIndex((t) => t.id === id);
-    if (index === -1) throw new Error('Testimonial not found');
-    mockTestimonials[index] = {
-      ...mockTestimonials[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockTestimonials[index];
+    const { data: updated, error } = await supabase
+      .from('testimonials')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as Testimonial;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockTestimonials.findIndex((t) => t.id === id);
-    if (index !== -1) mockTestimonials.splice(index, 1);
+    const { error } = await supabase
+      .from('testimonials')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Education API
 export const educationApi = {
   getAll: async (): Promise<Education[]> => {
-    await delay(300);
-    return [...mockEducation].sort((a, b) => a.order - b.order);
+    const { data, error } = await supabase
+      .from('education')
+      .select('*')
+      .order('order', { ascending: true });
+    if (error) throw error;
+    return data as Education[];
   },
   create: async (data: Omit<Education, 'id' | 'createdAt' | 'updatedAt'>): Promise<Education> => {
-    await delay(500);
-    const newEducation: Education = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockEducation.push(newEducation);
-    return newEducation;
+    const { data: created, error } = await supabase
+      .from('education')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    return created as Education;
   },
   update: async (id: string, data: Partial<Education>): Promise<Education> => {
-    await delay(400);
-    const index = mockEducation.findIndex((e) => e.id === id);
-    if (index === -1) throw new Error('Education not found');
-    mockEducation[index] = {
-      ...mockEducation[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockEducation[index];
+    const { data: updated, error } = await supabase
+      .from('education')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as Education;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockEducation.findIndex((e) => e.id === id);
-    if (index !== -1) mockEducation.splice(index, 1);
+    const { error } = await supabase
+      .from('education')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Custom Tabs API
 export const customTabsApi = {
   getAll: async (): Promise<CustomTab[]> => {
-    await delay(300);
-    return [...mockCustomTabs]
-      .filter((t) => t.isVisible)
-      .sort((a, b) => a.order - b.order);
+    const { data, error } = await supabase
+      .from('custom_tabs')
+      .select('*')
+      .eq('isVisible', true)
+      .order('order', { ascending: true });
+    if (error) throw error;
+    return data as CustomTab[];
   },
   get: async (slug: string): Promise<CustomTab | undefined> => {
-    await delay(200);
-    return mockCustomTabs.find((t) => t.slug === slug);
+    const { data, error } = await supabase
+      .from('custom_tabs')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    if (error) return undefined;
+    return data as CustomTab;
   },
   create: async (data: Omit<CustomTab, 'id' | 'createdAt' | 'updatedAt'>): Promise<CustomTab> => {
-    await delay(500);
-    const newTab: CustomTab = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockCustomTabs.push(newTab);
-    return newTab;
+    const { data: created, error } = await supabase
+      .from('custom_tabs')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    return created as CustomTab;
   },
   update: async (id: string, data: Partial<CustomTab>): Promise<CustomTab> => {
-    await delay(400);
-    const index = mockCustomTabs.findIndex((t) => t.id === id);
-    if (index === -1) throw new Error('Custom tab not found');
-    mockCustomTabs[index] = {
-      ...mockCustomTabs[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    return mockCustomTabs[index];
+    const { data: updated, error } = await supabase
+      .from('custom_tabs')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return updated as CustomTab;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockCustomTabs.findIndex((t) => t.id === id);
-    if (index !== -1) mockCustomTabs.splice(index, 1);
+    const { error } = await supabase
+      .from('custom_tabs')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Contact API
 export const contactApi = {
   submit: async (data: ContactFormData): Promise<Message> => {
-    await delay(800);
-    const newMessage: Message = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...data,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-    mockMessages.push(newMessage);
-    return newMessage;
+    const { data: created, error } = await supabase
+      .from('messages')
+      .insert({
+        ...data,
+        isRead: false
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return created as Message;
   },
   getAll: async (): Promise<Message[]> => {
-    await delay(300);
-    return [...mockMessages].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .order('createdAt', { ascending: false });
+    if (error) throw error;
+    return data as Message[];
   },
   markAsRead: async (id: string): Promise<void> => {
-    await delay(200);
-    const message = mockMessages.find((m) => m.id === id);
-    if (message) message.isRead = true;
+    const { error } = await supabase
+      .from('messages')
+      .update({ isRead: true })
+      .eq('id', id);
+    if (error) throw error;
   },
   delete: async (id: string): Promise<void> => {
-    await delay(300);
-    const index = mockMessages.findIndex((m) => m.id === id);
-    if (index !== -1) mockMessages.splice(index, 1);
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 
 // Settings API
 export const settingsApi = {
   get: async (): Promise<AdminSettings> => {
-    await delay(300);
-    // Initial mock settings
-    const saved = localStorage.getItem('portfolio_settings');
-    if (saved) return JSON.parse(saved);
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*');
     
+    if (error) throw error;
+    
+    // Map array of {key, value} to AdminSettings object
+    const settingsMap = (data as { key: string; value: string }[]).reduce((acc, s) => {
+      acc[s.key] = s.value;
+      return acc;
+    }, {} as Record<string, any>);
+
     return {
-      siteTitle: 'Tanveer Portfolio OS',
-      siteDescription: 'Healthcare Data Analyst & AI Systems Integrator',
-      primaryColor: '#0B3A45',
-      accentColor: '#F6C76D',
-      enableAnalytics: true,
-      enableContactForm: true,
-      enableWebhooks: false,
-      uiDensity: 'comfortable',
-      animationSpeed: 0.6,
-      seoTitle: 'Tanveer Portfolio | Healthcare IT & AI Systems',
-      seoDescription: 'Professional portfolio of Tanveer Bakshi A - Healthcare Data Analyst specializing in EMR/EHR and AI integrations.',
-      seoKeywords: 'healthcare it, emr, ehr, data analyst, ai development, tanveer bakshi',
+      siteTitle: settingsMap.site_title || 'Tanveer Portfolio OS',
+      siteDescription: settingsMap.site_description || 'Healthcare Data Analyst & AI Systems Integrator',
+      primaryColor: settingsMap.theme_primary || '#0B3A45',
+      accentColor: settingsMap.theme_accent || '#F6C76D',
+      enableAnalytics: settingsMap.analytics_enabled === 'true',
+      enableContactForm: settingsMap.contact_form_enabled === 'true',
+      enableWebhooks: settingsMap.webhooks_enabled === 'true',
+      uiDensity: settingsMap.ui_density || 'comfortable',
+      animationSpeed: parseFloat(settingsMap.animation_speed || '0.6'),
+      seoTitle: settingsMap.seo_title || 'Tanveer Portfolio | Healthcare IT & AI Systems',
+      seoDescription: settingsMap.seo_description || 'Professional portfolio of Tanveer Bakshi A - Healthcare Data Analyst specializing in EMR/EHR and AI integrations.',
+      seoKeywords: settingsMap.seo_keywords || 'healthcare it, emr, ehr, data analyst, ai development, tanveer bakshi',
       systemIntegrity: 99.98,
       uatRate: 94.8,
       dqScore: 96.2,
@@ -475,15 +566,22 @@ export const settingsApi = {
     };
   },
   update: async (data: Partial<AdminSettings>): Promise<AdminSettings> => {
-    await delay(500);
-    const current = await settingsApi.get();
-    const updated = { ...current, ...data, lastUpdated: new Date().toISOString() };
-    localStorage.setItem('portfolio_settings', JSON.stringify(updated));
-    console.log('[API] Settings updated:', updated);
-    return updated;
+    // Basic implementation: update matching keys in the table
+    const updates = Object.entries(data).map(([key, value]) => ({
+      key: key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`), // camel to snake
+      value: String(value)
+    }));
+
+    for (const update of updates) {
+      await supabase
+        .from('settings')
+        .upsert(update, { onConflict: 'key' });
+    }
+
+    return settingsApi.get();
   },
   reset: async (): Promise<AdminSettings> => {
-    localStorage.removeItem('portfolio_settings');
+    // Specific logic for resetting to defaults would go here
     return settingsApi.get();
   }
 };
@@ -491,21 +589,36 @@ export const settingsApi = {
 // Dashboard Stats API
 export const dashboardStatsApi = {
   get: async (): Promise<DashboardStats> => {
-    await delay(400);
-    return mockDashboardStats;
+    // Fetch counts from various tables
+    const [messages] = await Promise.all([
+      supabase.from('messages').select('*', { count: 'exact' }).limit(5).order('createdAt', { ascending: false })
+    ]);
+
+    return {
+      totalViews: 0,
+      uniqueVisitors: 0,
+      pageViews: {},
+      topProjects: [],
+      recentMessages: messages.data as Message[] || [],
+      resumeDownloads: 0,
+    };
   },
 };
 
 // Analytics API
 export const analyticsApi = {
   track: async (eventType: string, data?: Record<string, unknown>): Promise<void> => {
-    // Silently track analytics
-    console.log('[Analytics]', eventType, data);
+    await supabase.from('analytics_events').insert({
+      analyticsId: 'placeholder', // Ideally linked to a session
+      eventType,
+      metadata: data
+    });
   },
   trackPageView: async (page: string): Promise<void> => {
-    mockDashboardStats.totalViews++;
-    mockDashboardStats.pageViews[page] = (mockDashboardStats.pageViews[page] || 0) + 1;
-    console.log('[Analytics] Page view:', page);
+    await supabase.from('analytics').insert({
+      page,
+      userAgent: navigator.userAgent
+    });
   },
 };
 
