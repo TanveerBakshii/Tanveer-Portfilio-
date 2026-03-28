@@ -150,9 +150,6 @@ npm run dev
 - **Portfolio**: http://localhost:5173
 - **Admin Panel**: http://localhost:5173/admin.html
 
-### Demo Credentials
-- Email: `tanveerbakshii@gmail.com`
-- Password: `admin123`
 
 ## 📁 Project Structure
 
