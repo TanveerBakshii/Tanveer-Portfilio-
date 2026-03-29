@@ -5,7 +5,6 @@ import {
   Trash2, 
   FolderGit2, 
   Upload, 
-  X, 
   TrendingUp,
   Activity,
   Database,

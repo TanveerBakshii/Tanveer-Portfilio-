@@ -60,6 +60,7 @@ model Experience {
   id          String   @id @default(cuid())
   company     String
   title       String
+  logo        String?
   location    String?
   startDate   DateTime
   endDate     DateTime?
