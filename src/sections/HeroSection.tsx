@@ -9,6 +9,7 @@ gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 export function HeroSection() {
   const profile = mockProfile;
+  const resumeRoute = `${import.meta.env.BASE_URL}resume`;
 
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -191,7 +192,7 @@ export function HeroSection() {
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <a
-                  href="/resume"
+                  href={resumeRoute}
                   className="btn-secondary"
                   target="_blank"
                   rel="noopener noreferrer"

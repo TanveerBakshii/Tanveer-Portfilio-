@@ -20,7 +20,9 @@ gsap.registerPlugin(ScrollTrigger);
 import { ResumeView } from '@/views/ResumeView';
 
 function App() {
-  const isResumeView = typeof window !== 'undefined' && window.location.pathname === '/resume';
+  const isResumeView =
+    typeof window !== 'undefined' &&
+    window.location.pathname.endsWith('/resume');
 
   useEffect(() => {
     // Initialize scroll-triggered animations

@@ -274,9 +274,20 @@ export const mockTools: Tool[] = [
   { id: '3', name: 'Practo EMR', category: 'EMR', description: 'Clinical & Billing modules', order: 3, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
   { id: '4', name: 'Power BI', category: 'Analytics', description: 'Visualization', order: 4, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
   { id: '5', name: 'Tableau', category: 'Analytics', description: 'Data mining', order: 5, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '6', name: 'SQL', category: 'Database', description: 'Advanced queries', order: 6, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '7', name: 'JIRA', category: 'Management', description: 'Issue tracking', order: 7, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '8', name: 'Advanced Excel', category: 'Analytics', description: 'VBA, Pivot', order: 8, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '6', name: 'SQL Server', category: 'Database', description: 'Advanced queries', order: 6, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '7', name: 'Python', category: 'Engineering', description: 'Automation & AI', order: 7, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '8', name: 'Playwright', category: 'Scraping', description: 'Headless automation', order: 8, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '9', name: 'Selenium', category: 'Scraping', description: 'Legacy automation', order: 9, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '10', name: 'JIRA', category: 'Management', description: 'Issue tracking', order: 10, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '11', name: 'Azure', category: 'Cloud', description: 'Cloud infrastructure', order: 11, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '12', name: 'GCP', category: 'Cloud', description: 'Google Cloud Platform', order: 12, isPublic: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+];
+
+// Mock Technical Tags
+export const mockTags: string[] = [
+  'SQL', 'Power BI', 'Tableau', 'Excel', 'Python', 'HL7', 'FHIR', 'GCP', 
+  'JIRA', 'Epic', 'Cerner', 'RCM', 'Playwright', 'Puppeteer', 'PostgreSQL', 
+  'Docker', 'Azure', 'Selenium', 'EMR', 'EHR', 'UAT Testing', 'NLP', 'ETL'
 ];
 
 // Mock Certifications

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 gsap.registerPlugin(ScrollTrigger);
 
 export function ContactSection() {
+  const resumeDownloadUrl = `${import.meta.env.BASE_URL}resume.pdf`;
   const sectionRef = useRef<HTMLElement>(null);
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
@@ -157,7 +158,7 @@ export function ContactSection() {
 
             {/* Download Resume */}
             <a
-              href="/resume.pdf"
+              href={resumeDownloadUrl}
               download
               className="btn-secondary inline-flex"
             >

@@ -5,7 +5,8 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/Tanveer-Portfilio-/',
+  // Default works for Vercel/Netlify; override for GitHub Pages via VITE_BASE_PATH
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [inspectAttr(), react()],
   resolve: {
     alias: {
