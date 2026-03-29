@@ -2,6 +2,25 @@
 
 ## 🚀 Deploying Tanveer Portfolio OS
 
+## Supabase Backend Setup
+
+This repo already contains a Supabase client in `src/lib/supabase.ts`, so the clean deployment split is:
+
+- Supabase for Postgres and Storage
+- Vercel/Netlify/static hosting for the built frontend
+
+Use the full guide in [SUPABASE.md](/c:/Users/LENOVO/Desktop/Tanveer%20Portfolio/Portfolio%20OS/SUPABASE.md).
+
+Quick steps:
+
+1. Create a Supabase project.
+2. Run [supabase/schema.sql](/c:/Users/LENOVO/Desktop/Tanveer%20Portfolio/Portfolio%20OS/supabase/schema.sql) in the SQL editor.
+3. Set `DATABASE_URL`, `DIRECT_URL`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY`.
+4. Run `npm run db:seed`.
+5. Create a `media` storage bucket.
+
+Important: the current admin login is still mock browser-side auth, so anonymous write policies would be unsafe in production until real auth/RLS is added.
+
 ### Option 1: Vercel (Recommended)
 
 1. **Push to GitHub**

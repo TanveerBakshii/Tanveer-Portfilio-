@@ -11,7 +11,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, CheckCircle, Database, Activity, Github, Linkedin, ExternalLink, Terminal } from 'lucide-react';
+import { TrendingUp, CheckCircle, Database, Activity, Github, Linkedin, ExternalLink, Terminal, RefreshCw } from 'lucide-react';
+import { useGithub } from '@/hooks/useGithub';
+import type { GithubEvent } from '@/hooks/useGithub';
+import { mockProfile } from '@/lib/mockData';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -27,6 +30,11 @@ const lineData = [
 
 export function DashboardSection() {
   const { settings } = useSettings();
+  
+  // Extract username from mockProfile.github URL
+  const githubUsername = mockProfile.github?.split('/').pop() || 'TanveerBakshii';
+  const { user, events, loading, error, refresh } = useGithub(githubUsername);
+
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -296,37 +304,94 @@ export function DashboardSection() {
             {/* Right Panel - Activity Feeds */}
             <div ref={rightPanelRef} className="lg:col-span-3 space-y-6">
               {/* GitHub Insights */}
-              <div className="p-5 rounded-3xl bg-teal-light/40 border border-mist/10 hover:border-amber/20 transition-all group">
+              <div className="p-5 rounded-3xl bg-teal-light/40 border border-mist/10 hover:border-amber/20 transition-all group relative overflow-hidden">
+                {loading && (
+                  <div className="absolute inset-0 bg-teal-dark/10 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                    <RefreshCw className="w-6 h-6 text-amber animate-spin" />
+                  </div>
+                )}
+                
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Github className="w-5 h-5 text-mist" />
                     <h4 className="text-sm font-semibold text-mist uppercase tracking-wider">GitHub Insights</h4>
                   </div>
-                  <a href="https://github.com/TanveerBakshii" target="_blank" rel="noreferrer">
-                    <ExternalLink className="w-4 h-4 text-mist-dark hover:text-amber transition-colors" />
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => refresh()} 
+                      className="p-1 rounded-md hover:bg-mist/5 text-mist-dark hover:text-amber transition-colors"
+                      title="Refresh Stats"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <a href={mockProfile.github} target="_blank" rel="noreferrer">
+                      <ExternalLink className="w-4 h-4 text-mist-dark hover:text-amber transition-colors" />
+                    </a>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-mist-dark">Contribution Streak</span>
-                    <span className="text-xs font-mono text-amber">42 Days</span>
+                    <span className="text-xs text-mist-dark">Public Repos</span>
+                    <span className="text-xs font-mono text-mist">{loading ? '...' : user?.public_repos || '0'}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-mist-dark">Active Repos</span>
-                    <span className="text-xs font-mono text-mist">12</span>
+                    <span className="text-xs text-mist-dark">Followers</span>
+                    <span className="text-xs font-mono text-amber">{loading ? '...' : user?.followers || '0'}</span>
                   </div>
+                  
                   <div className="pt-2 border-t border-mist/5">
-                    <div className="text-[10px] text-mist-dark uppercase mb-2 font-bold tracking-widest">Recent Activity</div>
-                    <div className="space-y-2">
-                       <div className="flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber mt-1" />
-                          <p className="text-[11px] text-mist leading-tight">Merged PR #45: Refactored EMR data scrapper</p>
-                       </div>
-                       <div className="flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-mist-dark mt-1" />
-                          <p className="text-[11px] text-mist leading-tight">Pushed 4 commits to Portfolio-OS</p>
-                       </div>
+                    <div className="text-[10px] text-mist-dark uppercase mb-2 font-bold tracking-widest flex justify-between">
+                      <span>Recent Activity</span>
+                      {error && <span className="text-[9px] text-rose-400 normal-case font-normal italic">Live feed unavailable</span>}
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {loading ? (
+                        [1, 2].map(i => (
+                          <div key={i} className="animate-pulse space-y-1">
+                            <div className="h-2 bg-mist/5 rounded w-3/4" />
+                            <div className="h-1.5 bg-mist/5 rounded w-1/2" />
+                          </div>
+                        ))
+                      ) : events.length > 0 ? (
+                        events.slice(0, 3).map((event: GithubEvent) => {
+                          let description = '';
+                          const repoName = event.repo.name.split('/').pop();
+                          
+                          switch (event.type) {
+                            case 'PushEvent':
+                              const count = event.payload.commits?.length || 0;
+                              description = `Pushed ${count} commit${count !== 1 ? 's' : ''} to ${repoName}`;
+                              break;
+                            case 'CreateEvent':
+                              description = `Created ${event.payload.ref_type || 'resource'} in ${repoName}`;
+                              break;
+                            case 'PullRequestEvent':
+                              description = `${event.payload.action === 'opened' ? 'Opened' : 'Updated'} PR in ${repoName}`;
+                              break;
+                            case 'WatchEvent':
+                              description = `Starred repository ${repoName}`;
+                              break;
+                            default:
+                              description = `Activity in ${repoName}`;
+                          }
+
+                          return (
+                            <div key={event.id} className="flex items-start gap-2 group/item">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber mt-1 group-hover/item:scale-125 transition-transform" />
+                              <div className="flex-1">
+                                <p className="text-[11px] text-mist leading-tight line-clamp-2">{description}</p>
+                                <p className="text-[9px] text-mist-dark/60 font-mono mt-0.5">
+                                  {new Date(event.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-[10px] text-mist-dark italic">No recent public activity found.</p>
+                      )}
                     </div>
                   </div>
                 </div>
